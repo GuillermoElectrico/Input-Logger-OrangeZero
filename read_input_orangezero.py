@@ -3,134 +3,69 @@
 from influxdb import InfluxDBClient
 from datetime import datetime, timedelta
 from os import path
+import OPi.GPIO as GPIO # to install "pip3 install --upgrade OPi.GPIO"
 import sys
 import os
-import serial
 import time
 import yaml
 import logging
-import minimalmodbus
-
-#PORT = 1
-PORT = '/dev/ttyUSB0'
+import subprocess
+GPIO.setmode(GPIO.BOARD)
 
 # Change working dir to the same dir as this script
 os.chdir(sys.path[0])
 
 class DataCollector:
-    def __init__(self, influx_client, device_yaml):
+    def __init__(self, influx_client, inputspins_yaml):
         self.influx_client = influx_client
-        self.device_yaml = device_yaml
+        self.inputspins_yaml = inputspins_yaml
         self.max_iterations = None  # run indefinitely by default
-        self.device_map = None
-        self.device_map_last_change = -1
-        log.info('Devices:')
-        for device in sorted(self.get_devices(), key=lambda x:sorted(x.keys())):
-            log.info('\t {} <--> {}'.format( device['id'], device['name']))
+        self.inputspins = None
+        gpioinputs = self.get_inputs()
+        for gpio in gpioinputs:
+            GPIO.setup(gpioinputs[gpio], GPIO.IN)
 
-    def get_devices(self):
-        assert path.exists(self.device_yaml), 'Device map not found: %s' % self.device_yaml
-        if path.getmtime(self.device_yaml) != self.device_map_last_change:
+    def get_inputs(self):
+        assert path.exists(self.inputspins_yaml), 'Inputs not found: %s' % self.inputspins_yaml
+        if path.getmtime(self.inputspins_yaml) != self.inputspins_map_last_change:
             try:
-                log.info('Reloading device map as file changed')
-                new_map = yaml.load(open(self.device_yaml))
-                self.device_map = new_map['devices']
-                self.device_map_last_change = path.getmtime(self.device_yaml)
+                log.info('Reloading inputs as file changed')
+                self.inputspins = yaml.load(open(self.inputspins_yaml))
+                self.inputspins_map_last_change = path.getmtime(self.inputspins_yaml)
             except Exception as e:
-                log.warning('Failed to re-load device map, going on with the old one.')
+                log.warning('Failed to re-load inputs, going on with the old one.')
                 log.warning(e)
-        return self.device_map
+        return self.inputspins
 
     def collect_and_store(self):
-        #instrument.debug = True
-        devices = self.get_devices()
+        inputs = self.get_inputs()
         t_utc = datetime.utcnow()
         t_str = t_utc.isoformat() + 'Z'
 
-        instrument = minimalmodbus.Instrument('/dev/ttyUSB0', 1) # port name, slave address (in decimal)
-        instrument.mode = minimalmodbus.MODE_RTU   # rtu or ascii mode
         datas = dict()
-        device_id_name = dict() # mapping id to name
 
-        for device in devices:
-            device_id_name[device['id']] = device['name']
+        start_time = time.time()
 
-            instrument.serial.baudrate = device['baudrate']
-            instrument.serial.bytesize = device['bytesize']
-            instrument.serial.bytesize = device['bytesize']
-            if device['parity'] == 'none':
-                instrument.serial.parity = minimalmodbus.serial.PARITY_NONE
-            elif device['parity'] == 'odd':
-                instrument.serial.parity = minimalmodbus.serial.PARITY_ODD
-            elif device['parity'] == 'even':
-                instrument.serial.parity = minimalmodbus.serial.PARITY_EVEN
-            else:
-                log.error('No parity specified')
-                raise
-            instrument.serial.stopbits = device['stopbits']
-            instrument.serial.timeout  = device['timeout']    # seconds
-            instrument.address = device['id']    # this is the slave address number
+        for parameter in inputs:
+            datas[parameter] = !GPIO.input(inputs[parameter])
 
-            log.debug('Reading device %s.' % (device['id']))
-            start_time = time.time()
-            parameters = yaml.load(open(device['type']))
-            datas[device['id']] = dict()
-
-            for parameter in parameters:
-                # If random readout errors occour, e.g. CRC check fail, test to uncomment the following row
-                #time.sleep(0.01) # Sleep for 10 ms between each parameter read to avoid errors
-                retries = 10
-                while retries > 0:
-                    try:
-                        retries -= 1
-                        if parameters[parameter][2] == 1:
-                            datas[device['id']][parameter] = instrument.read_float(parameters[parameter][0], device['function'], parameters[parameter][1])
-                        elif parameters[parameter][2] == 2:
-                            datas[device['id']][parameter] = instrument.read_long(parameters[parameter][0], device['function'], parameters[parameter][1])
-                        elif parameters[parameter][2] == 3:
-                            datas[device['id']][parameter] = instrument.read_register(parameters[parameter][0], device['function'], parameters[parameter][1])
-                        retries = 0
-                        pass
-                    except ValueError as ve:
-                        log.warning('Value Error while reading register {} from device {}. Retries left {}.'
-                               .format(parameters[parameter], device['id'], retries))
-                        log.error(ve)
-                        if retries == 0:
-                            raise RuntimeError
-                    except TypeError as te:
-                        log.warning('Type Error while reading register {} from device {}. Retries left {}.'
-                               .format(parameters[parameter], device['id'], retries))
-                        log.error(te)
-                        if retries == 0:
-                            raise RuntimeError
-                    except IOError as ie:
-                        log.warning('IO Error while reading register {} from device {}. Retries left {}.'
-                               .format(parameters[parameter], device['id'], retries))
-                        log.error(ie)
-                        if retries == 0:
-                            raise RuntimeError
-                    except:
-                        log.error("Unexpected error:", sys.exc_info()[0])
-                        raise
-
-            datas[device['id']]['ReadTime'] =  time.time() - start_time			
+        datas['ReadTime'] =  time.time() - start_time
 
         json_body = [
             {
-                'measurement': 'energy',
+                'measurement': 'InputsLog',
                 'tags': {
-                    'id': device_id,
-                    'device': device['name'],
+                    'id': inputs_id,
                 },
                 'time': t_str,
-                'fields': datas[device_id]
+                'fields': datas[inputs_id]
             }
-            for device_id in datas
+            for inputs_id in datas
         ]
         if len(json_body) > 0:
             try:
                 self.influx_client.write_points(json_body)
-                log.info(t_str + ' Data written for %d devices.' % len(json_body))
+                log.info(t_str + ' Data written for %d inputs.' % len(json_body))
             except Exception as e:
                 log.error('Data not written!')
                 log.error(e)
@@ -163,8 +98,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--interval', default=60,
                         help='Device readout interval (seconds), default 60')
-    parser.add_argument('--devices', default='devices.yml',
-                        help='YAML file containing Device ID, name, type etc. Default "devices.yml"')
+    parser.add_argument('--inputspins', default='inputspins.yml',
+                        help='YAML file containing relation inputs, name, type etc. Default "inputspins.yml"')
     parser.add_argument('--log', default='CRITICAL',
                         help='Log levels, DEBUG, INFO, WARNING, ERROR or CRITICAL')
     parser.add_argument('--logfile', default='',
@@ -198,7 +133,7 @@ if __name__ == '__main__':
                             influx_config['dbname'])
 
     collector = DataCollector(influx_client=client,
-                              device_yaml=args.devices)
+                              inputspins_yaml=args.inputspins)
 
     repeat(interval,
            max_iter=collector.max_iterations,
