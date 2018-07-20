@@ -1,19 +1,8 @@
-meters:
-    - name : Device Group 1
-      type : ACQ810.yml
-      id : 1     # this is the slave address number
-      baudrate : 9600   # Baud
-      bytesize : 8
-      parity : none # none | odd | even
-      stopbits : 1
-      timeout  : 0.5   # seconds
-      function : 3    # 3 = Read Input register or 4 = Read Holding register
-    - name : Device Group 2
-      type : ACS310.yml
-      id : 10     # this is the slave address number
-      baudrate : 9600   # Baud
-      bytesize : 8
-      parity : none # none | odd | even
-      stopbits : 1
-      timeout  : 0.5   # seconds
-      function : 3    # 3 = Read Input register or 4 = Read Holding register
+Input 1 : 26 #PA10/PA_NINT10/SIM_DET
+Input 2 : 22 #PA02/UART2_RTS
+Input 3 : 18 #PA18/TWI1_SCK
+Input 4 : 16 #PA19/TWI1_SDA
+Input 5 : 12 #PA07/PA_EINT7/SIM_CLK
+Input 6 : 11 #PA01/UART2_RX
+Input 7 : 13 #PA00/UART2_TX
+Input 8 : 15 #PA03/UART2_CTS
