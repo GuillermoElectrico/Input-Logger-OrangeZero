@@ -42,53 +42,46 @@ class DataCollector:
         t_utc = datetime.utcnow()
         t_str = t_utc.isoformat() + 'Z'
 
+        save = False
         datas = dict()
 
-        start_time = time.time()
+		## inicio while :
+        while:
+            start_time = time.time()
 
-        for parameter in inputs:
-            datas[parameter] = !GPIO.input(inputs[parameter])
+            for parameter in inputs:
+                statusInput = !GPIO.input(inputs[parameter])
+                if statusInput != datas[parameter]
+                    datas[parameter] = statusInput
+                    save = True
+			
+            datas['ReadTime'] =  time.time() - start_time
 
-        datas['ReadTime'] =  time.time() - start_time
-
-        json_body = [
-            {
-                'measurement': 'InputsLog',
-                'tags': {
-                    'id': inputs_id,
-                },
-                'time': t_str,
-                'fields': datas[inputs_id]
-            }
-            for inputs_id in datas
-        ]
-        if len(json_body) > 0:
-            try:
-                self.influx_client.write_points(json_body)
-                log.info(t_str + ' Data written for %d inputs.' % len(json_body))
-            except Exception as e:
-                log.error('Data not written!')
-                log.error(e)
-                raise
-        else:
-            log.warning(t_str, 'No data sent.')
-
-
-def repeat(interval_sec, max_iter, func, *args, **kwargs):
-    from itertools import count
-    import time
-    starttime = time.time()
-    for i in count():
-        if interval_sec > 0:
-            time.sleep(interval_sec - ((time.time() - starttime) % interval_sec))
-        if i % 1000 == 0:
-            log.info('Collected %d readouts' % i)
-        try:
-            func(*args, **kwargs)
-        except Exception as ex:
-            log.error(ex)
-        if max_iter and i >= max_iter:
-            return
+            if save:
+                save = False
+                json_body = [
+                    {
+                        'measurement': 'LocalInputsLog',
+                        'tags': {
+                            'id': inputs_id,
+                        },
+                        'time': t_str,
+                        'fields': datas[inputs_id]
+                    }
+                    for inputs_id in datas
+                ]
+                if len(json_body) > 0:
+                    try:
+                        self.influx_client.write_points(json_body)
+                        log.info(t_str + ' Data written for %d inputs.' % len(json_body))
+                    except Exception as e:
+                        log.error('Data not written!')
+                        log.error(e)
+                        raise
+                else:
+                    log.warning(t_str, 'No data sent.')
+			## delay 10 ms between read inputs
+            time.sleep(0.01)
 
 
 if __name__ == '__main__':
@@ -96,8 +89,6 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--interval', default=60,
-                        help='Device readout interval (seconds), default 60')
     parser.add_argument('--inputspins', default='inputspins.yml',
                         help='YAML file containing relation inputs, name, type etc. Default "inputspins.yml"')
     parser.add_argument('--log', default='CRITICAL',
@@ -105,7 +96,6 @@ if __name__ == '__main__':
     parser.add_argument('--logfile', default='',
                         help='Specify log file, if not specified the log is streamed to console')
     args = parser.parse_args()
-    interval = int(args.interval)
     loglevel = args.log.upper()
     logfile = args.logfile
 
@@ -135,6 +125,4 @@ if __name__ == '__main__':
     collector = DataCollector(influx_client=client,
                               inputspins_yaml=args.inputspins)
 
-    repeat(interval,
-           max_iter=collector.max_iterations,
-           func=lambda: collector.collect_and_store())
+    collector.collect_and_store()
