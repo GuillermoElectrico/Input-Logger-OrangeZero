@@ -28,7 +28,7 @@ setup(name='modbus_logger',
         'Programming Language :: Python :: 3.5'
       ],
       keywords='GPIO Orange Pi Zero Logger',
-      install_requires=[]+(['setuptools','ez_setup','pyserial','minimalmodbus', 'influxdb', 'pyyaml', 'OPi.GPIO'] if "linux" in sys.platform else []),
+      install_requires=[]+(['setuptools','ez_setup', 'influxdb', 'pyyaml', 'OPi.GPIO'] if "linux" in sys.platform else []),
       license='MIT',
       packages=[],
       include_package_data=True,
