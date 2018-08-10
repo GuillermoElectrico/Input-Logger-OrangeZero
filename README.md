@@ -88,7 +88,7 @@ Its been verified to work with a orange pi zero with simple 8 inputs module (com
     ```sh
     $ chmod 777 read_input_orangezero.py
     ```
-* Edit meters.yml to match your configuration
+* Edit inputs.yml to match your configuration
 * Test the configuration by running:
     ```sh
     ./read_input_orangezero.py
