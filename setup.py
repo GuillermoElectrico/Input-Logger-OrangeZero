@@ -24,7 +24,7 @@ setup(name='modbus_logger',
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: MIT License',
-        'Operating System :: Raspbian',
+        'Operating System :: armbian',
         'Programming Language :: Python :: 3.5'
       ],
       keywords='GPIO Orange Pi Zero Logger',

@@ -17,8 +17,6 @@ Its been verified to work with a orange pi zero with simple 8 inputs module (com
 * [InfluxDB](https://docs.influxdata.com/influxdb/v1.3/)
 * [Grafana](http://docs.grafana.org/)
 
-### Prerequisite
-
 ### Installation
 #### Install InfluxDB*
 
@@ -96,7 +94,7 @@ Its been verified to work with a orange pi zero with simple 8 inputs module (com
     ```
 * To run the python script at system startup. Add to following lines to the end of /etc/rc.local but before exit:
     ```sh
-    # Start Energy Meter Logger
+    # Start Logger
     /home/pi/energy-meter-logger/read_input_orangezero.py > /var/log/inputs-logger.log &
     ```
     Log with potential errors are found in /var/log/inputs-logger.log
