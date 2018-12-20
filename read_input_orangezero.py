@@ -22,6 +22,7 @@ class DataCollector:
         self.max_iterations = None  # run indefinitely by default
         self.inputspins = None
         gpioinputs = self.get_inputs()
+        GPIO.setwarnings(False)
         for gpio in gpioinputs:
             GPIO.setup(gpioinputs[gpio], GPIO.IN)
 
@@ -126,3 +127,5 @@ if __name__ == '__main__':
                               inputspins_yaml=args.inputspins)
 
     collector.collect_and_store()
+	
+    GPIO.cleanup()
