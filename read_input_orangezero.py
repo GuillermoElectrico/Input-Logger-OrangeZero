@@ -173,11 +173,17 @@ if __name__ == '__main__':
 
     log.addHandler(loghandle)
 
+    log.info('Sleep {} seconds for booting' .format( interval ))
+
+    time.sleep( interval )
+
     log.info('Started app')
 
     collector = DataCollector(influx_yaml=args.influxdb,
                               inputspins_yaml=args.inputspins, interval_save=interval)
 
+    time.sleep( interval )
+							  
     collector.collect_and_store()
 	
     GPIO.cleanup()
