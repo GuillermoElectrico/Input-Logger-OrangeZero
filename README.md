@@ -39,7 +39,7 @@ Its been verified to work with a orange pi zero with simple 8 inputs module (com
     ```sh
     $ influx
     CREATE DATABASE db_inputs
-    exit 
+    exit
     ```
 [*source](https://docs.influxdata.com/influxdb/v1.3/introduction/installation/)
 
@@ -56,7 +56,7 @@ Its been verified to work with a orange pi zero with simple 8 inputs module (com
     ```
 * Now install
     ```sh
-    $ sudo apt-get update && sudo apt-get install grafana 
+    $ sudo apt-get update && sudo apt-get install grafana
     ```
 * Start the service using systemd:
     ```sh
@@ -92,9 +92,20 @@ Its been verified to work with a orange pi zero with simple 8 inputs module (com
     ./read_input_orangezero.py
     ./read_input_orangezero.py --help # Shows you all available parameters
     ```
+
+	If the error appears:
+	```
+	/usr/bin/env: ‘python3\r’: No such file or directory
+	```
+	Use dos2unix to fix it.
+	```
+	$ sudo apt install dos2unix
+	$ dos2unix /PATH/TO/YOUR/FILE
+	```
+
 * To run the python script at system startup. Add to following lines to the end of /etc/rc.local but before exit:
     ```sh
     # Start Logger
-    /home/pi/Input-Logger-OrangeZero/read_input_orangezero.py > /var/log/inputs-logger.log &
+    /home/pi/Input-Logger-OrangeZero/read_input_orangezero.py --interval 10 > /var/log/inputs-logger.log &
     ```
     Log with potential errors are found in /var/log/inputs-logger.log
