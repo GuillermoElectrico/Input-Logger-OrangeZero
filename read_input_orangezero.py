@@ -181,8 +181,6 @@ if __name__ == '__main__':
 
     collector = DataCollector(influx_yaml=args.influxdb,
                               inputspins_yaml=args.inputspins, interval_save=interval)
-
-    time.sleep( interval )
 							  
     collector.collect_and_store()
 	
